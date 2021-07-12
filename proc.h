@@ -54,6 +54,7 @@ struct proc {
   int rtime;		       // Process run time
   int iotime;		       // Process waited time for I/O
   int priority;		       // Process priority for scheduling
+  int level;		       // Process specify queue level
 };
 
 // Process memory is laid out contiguously, low addresses first:
