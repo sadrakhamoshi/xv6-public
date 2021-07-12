@@ -100,3 +100,14 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_spri(void)
+{
+    int priority;
+    if (argptr(0, (void *)&priority, sizeof(int)) < 0)
+    {
+        return -1;
+    }
+    return set_priority(priority);
+}
