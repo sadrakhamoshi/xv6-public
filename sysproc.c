@@ -102,7 +102,7 @@ sys_uptime(void)
 }
 
 int
-sys_spri(void)
+sys_set_priority(void)
 {
     int priority;
     if (argptr(0, (void *)&priority, sizeof(int)) < 0)
