@@ -51,6 +51,9 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
+      struct proc *curproc = myproc();
+      if (curproc && curproc->state == RUNNING) curproc->rtime++;
+      if (curproc && curproc->state == SLEEPING) curproc->iotime++;
       wakeup(&ticks);
       release(&tickslock);
     }

@@ -112,6 +112,13 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  // Initialize new parameter of Process
+  p->stime = ticks;
+  p->etime = 0;
+  p->rtime = 0;
+  p->iotime = 0;
+  p->priority = 60;
+
   return p;
 }
 
@@ -261,6 +268,9 @@ exit(void)
     }
   }
 
+  // store terminated time in etime
+  curproc->etime = ticks;
+
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -311,6 +321,50 @@ wait(void)
   }
 }
 
+// waitx
+int
+waitx(int *wtime, int *rtime)
+{
+  struct proc *p;
+  int havekids, pid;
+  struct proc *curproc = myproc();
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != curproc)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        *wtime = p->etime - p->stime - p->rtime - p->iotime;
+        *rtime = p->rtime;
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+    // No point waiting if we don't have any children.
+    if(!havekids || curproc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(curproc, &ptable.lock);  //DOC: wait-sleep
+  }
+}
+
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -327,6 +381,9 @@ scheduler(void)
   c->proc = 0;
   
   for(;;){
+
+    int highest_pri = 5000;
+    struct proc *highest_proc = 0;
     // Enable interrupts on this processor.
     sti();
 
@@ -339,11 +396,19 @@ scheduler(void)
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      if (p->priority < highest_pri) {
+	  highest_proc = p;
+	  highest_pri = p->priority;
+	}
+    }
 
-      swtch(&(c->scheduler), p->context);
+      // check heighest_proc
+      if (highest_proc != 0) {
+	c->proc = highest_proc;
+        switchuvm(highest_proc);
+	highest_proc->state = RUNNING;
+
+      swtch(&(c->scheduler), highest_proc->context);
       switchkvm();
 
       // Process is done running for now.
