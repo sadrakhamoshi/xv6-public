@@ -597,3 +597,17 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int
+set_priority(int newPriority)
+{
+    struct proc *curr_proc = myproc();
+    int prePriority = curr_proc->priority;
+    curr_proc->priority = newPriority;
+
+    if (newPriority < prePriority)
+    {
+        yield();
+    }
+    return prePriority;
+}
