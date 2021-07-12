@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
     }
     else if (pid > 0)
     {
+	sleep(70);
         printf(0, "wait in parent\n");
         waitx(&wtime, &rtime);
         printf(0, "parent wait time=%d, parent run time=%d\n", wtime, rtime);
