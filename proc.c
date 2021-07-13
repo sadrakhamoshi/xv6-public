@@ -118,6 +118,7 @@ found:
   p->rtime = 0;
   p->iotime = 0;
   p->priority = 60;
+  p->level = 3;
 
   return p;
 }
@@ -380,100 +381,93 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
 
-  for (;;)
-  {
+  for(;;){
 
-    struct proc *candidate = 0;
+    struct proc *targe_proc = 0;
     // Enable interrupts on this processor.
     sti();
 
-    acquire(&ptable.lock);
     // Loop over process table looking for process to run.
-    int lvl = 1;
-    for (lvl = 2; lvl <= 3; lvl++)
+    acquire(&ptable.lock);
+    int level;
+    for (level = 1; level <= 3; level++)
     {
-      //First check the first level queue.
-      if (lvl == 1)
+      // first qeueue.
+      if (level == 1)
       {
-        int flag = 0;
-        for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+        int flag1 = 0;
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
         {
-          if (p->state != RUNNABLE)
-            continue;
-          if ((p->level) == lvl)
-          {
-            flag = 1;
-            candidate = p;
-            break;
-          }
+           if (p -> state != RUNNABLE) continue;
+           if ((p -> level) == level)
+           {
+             cprintf("Hello1 ");
+             flag1 = 1;
+             targe_proc = p;
+             break;
+           }
         }
-        if (flag)
-          break;
+        if (flag1) break;
       }
-      else if (lvl == 2)
+      // second queue
+       else if (level == 2)
       {
-        //Check second level queue in round robin fashion (no time slice, aka time slice = 1 tick)
-        static int ind2 = 0; // Static value helps us store value for next round
-        int cnt2 = 0;
+        static int ind2 = 0;
+        int p_id_2 = 0;
         int flag2 = 0;
-        for (cnt2 = 0; cnt2 < NPROC; cnt2++)
+        for(p_id_2 = 0; p_id_2 < NPROC; p_id_2++)
         {
-          p = ptable.proc + (cnt2 + ind2) % NPROC;
-          if (p->state != RUNNABLE)
-            continue;
-          if ((p->level) == lvl)
+          p = ptable.proc + (p_id_2 + ind2) % NPROC;
+          if (p -> state != RUNNABLE) continue;
+          if ((p -> level) == level)
           {
             flag2 = 1;
-            candidate = p;
+            targe_proc = p;
+            cprintf("Hello2 ");
             break;
           }
-          cnt2++;
+          p_id_2++;
         }
         ind2++;
-        if (flag2)
-          break;
-      }
-      else if (lvl == 3)
-      {
+        if (flag2) break;
+      } else if (level == 3) {
         //Same as second queue
         static int ind3 = 0;
-        int cnt3 = 0;
+        int p_id_3 = 0;
         int flag3 = 0;
-        for (cnt3 = 0; cnt3 < NPROC; cnt3++)
+        for(p_id_3 = 0 ;p_id_3 < NPROC ;p_id_3++)
         {
-          p = ptable.proc + (cnt3 + ind3) % NPROC;
-          if (p->state != RUNNABLE)
-            continue;
-          if ((p->level) == lvl)
+          p = ptable.proc + (p_id_3 + ind3) % NPROC;
+          if (p -> state != RUNNABLE) continue;
+          if ((p -> level) == level)
           {
             flag3 = 1;
-            candidate = p;
+            targe_proc = p;
+            // cprintf("Hello3 ");
             break;
           }
-          cnt3++;
+          p_id_3++;
         }
         ind3++;
-        if (flag3)
-          break;
+        if (flag3) break;
       }
     }
-    //To ensure that least one RUNNABLE processes was found
-    if (candidate != 0)
+    // check targe process
+    if (targe_proc != 0)
     {
-      c->proc = candidate;
-      switchuvm(candidate);
-      candidate->state = RUNNING;
+      c->proc = targe_proc;
+      switchuvm(targe_proc);
+      targe_proc->state = RUNNING;
 
-      swtch(&(c->scheduler), candidate->context);
+      swtch(&(c->scheduler), targe_proc->context);
       switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
       c->proc = 0;
+
     }
     release(&ptable.lock);
   }
 }
+
 
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores

@@ -2,55 +2,45 @@
 #include "stat.h"
 #include "user.h"
 
-//                     ind 0  1  2  3  4  5  6  7  8  9  10
-int test_queue_lvl[100] = {1, 2, 3, 1, 1, 2, 3, 1, 1, 2, 3};
-
-//A  procedure used to create the test processes.
-void create_test_processes(int pcnt, int idx)
+void CreateProcess(int process_count, int idx)
 {
-  while (pcnt != idx)
-  {
+    if (idx == process_count)
+        for (;;)
+            ; //busy wait
     int pid = fork();
+
+    // child
     if (pid == 0)
-    {
-      idx++;
-    }
+        CreateProcess(process_count, idx + 1);
+
+    // parent
     else if (pid > 0)
     {
-      sleep(1000);
-      printf(0, "Running process with index=%d and pid=%d\n", idx, pid);
-      int tmp = 47;
-      for (int i = 0; i < 10000000; i++)
-      {
-        tmp = (tmp + i % 13) % 23;
-      }
+        sleep(1000);
+        printf(0, "Running process ---> index : %d and pid : %d\n", idx, pid);
+        int tmp = 0;
+        for (int i = 0; i < 100000; i++)
+            tmp = (i % 12 + tmp ) % 31; //some computation for the process
     }
     else
-    {
-      printf(0, "E: fork error");
-    }
-  }
-  while (1 == 1)
-  {
-  }
+        printf(0, "E: fork error");
 }
 
 int main(void)
 {
+    int pid = fork();
 
-  int pid = fork();
-
-  if (pid < 0)
-  {
-    printf(0, "E: fork error in main");
-  }
-  else if (pid > 0)
-  {
-    wait();
-  }
-  else
-  {
-    create_test_processes(10, 0);
-  }
-  exit();
+    if (pid < 0)
+    {
+        printf(0, "Erorr: fork error in main");
+    }
+    else if (pid > 0)
+    {
+        wait();
+    }
+    else
+    {
+        CreateProcess(8, 0);
+    }
+    exit();
 }
